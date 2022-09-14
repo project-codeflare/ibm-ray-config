@@ -57,9 +57,8 @@ def validate_api_keys(base_config, modules, iam_api_key, compute_iam_endpoint):
 @click.option('--version', '-v', help=f'Get package version', is_flag=True)
 @click.option('--compute-iam-endpoint', help='IAM endpoint url used for compute instead of default https://iam.cloud.ibm.com')
 @click.option('--endpoint', help='IBM Cloud API endpoint')
-@click.option('--defaults', help=f'Create defaults if not exist and generate default config', is_flag=True)
 @click.option('--pr', '-g', help=f'Temporary workaround for ray gen2 only. If specified, use provider setup from PR github', is_flag=True, default=False)
-def builder(iam_api_key, output_file, input_file, version, compute_iam_endpoint, endpoint, defaults, pr):
+def builder(iam_api_key, output_file, input_file, version, compute_iam_endpoint, endpoint, pr):
 
     if version:
         print(f"{pkg_resources.get_distribution('ibm-ray-config').project_name} "

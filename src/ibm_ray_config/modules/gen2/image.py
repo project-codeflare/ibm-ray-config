@@ -29,7 +29,7 @@ class ImageConfig(ConfigBuilder):
         if image_id:
             image_obj = find_obj(image_objects, 'dummy', obj_id=image_id)
         else:
-            # find first occurance
+            # find first occurrence
             image_obj = next((obj for obj in image_objects if 'ibm-ubuntu-20-04-' in obj['name']), None)
             
         return image_obj['id'], image_obj['minimum_provisioned_size'], image_obj['owner_type'] == 'user'

@@ -1,10 +1,11 @@
-# Tool to generate Lithops configuration file
+# Ray Configuration Generator For IBM-Cloud Services
 
 ibm-ray-config is a CLI tool that greatly simplifies user experience by generating Ray configuration files for IBM services.
+Currently supporting only IBM Virtual Private Cloud (VPC).
 
 ## Setup
 
-The tool been mostly tested with Ubuntu 18.04/20.04 and Fedora 35, but should work with most Linux systems
+The tool has been mostly tested with Ubuntu 18.04/20.04 and Fedora 35, but should work with most Linux systems.   
 Requirements: `ssh-keygen` utility installed:
 ```
 sudo apt install openssh-client
@@ -20,7 +21,7 @@ pip install ibm-ray-config
 Use the configuration tool as follows
 
 ```
-ibm-ray-config [--iam-api-key IAM_API_KEY] [-i INPUT_FILE] [-o OUTPUT_PATH] [--version] [--defaults] 
+ibm-ray-config [--iam-api-key IAM_API_KEY] [-i INPUT_FILE] [-o OUTPUT_PATH] [--version] 
 ```
 Get a short description of the available flags via ```ibm-ray-config --help```
 
@@ -38,21 +39,25 @@ Get a short description of the available flags via ```ibm-ray-config --help```
 
 
 
-### Using ibm-ray-config to generate config file without user interaction
-In order to let ibm-ray-config generate config file based on some defaults and create vpc and all its peripheral assets automatically, please run:
+### Using ibm-ray-config Config Tool Programmatically
+Attention: though not all fields are mandatory, unspecified resources will be created automatically on the backend.
 
-```
-ibm-ray-config -a <API_KEY>  --defaults
-```
+#### IBM Gen2 VPC
 
-### Using ibm-ray-config config tool programmatically
-Notice, not all fields are mandatory. Unspecified resources will be created automatically on the backend.
+Mandatory fields are: `iam_api_key` and `region`.
+Processor architecture: Intel x86.    
 
-E.g.
-If existing vpc id not provided - vpc will be created automatically with all required peripheral resources like security groups, gateway.. etc following minimal default requirements
-If ssh key details not provided - new ssh key pair will be generated and registered in ibm cloud
+Unspecified Fields will be replaced with the following values:     
+- `vpc_id` - If available a random one will be chosen.
+         Otherwise (if no VPC exists) a new VPC named:ray-default-vpc-<INT> will be created and a random floating-ip will be assigned to the subnet's gateway. The process may create a new floating-ip if no unbound ip exists. 
+- `ssh_key_filename` (path to private ssh-key) - A new one will be created and registered under the specified region. 
+- `key_id` (ssh-key on the IBM-VPC platform) - If ssh_key_filename instead specified the public key will be generated and registered, otherwise, a new key will be created and registered.   
+- `image_id` - The VMs image will be Ubuntu 20.04.
+- `profile_name` - 'bx2-2x8', which equates to: 2CPUs, 8GiB RAM, 100GB storage.
+- `min_workers` - 0.
+- `max_workers` - 0.
 
-###### Ray Gen2
+Example:
 ```
 from ibm_ray_config import generate_config
 
@@ -61,8 +66,7 @@ region = 'eu-de'
 generate_config(iam_api_key=api_key, region=region, image_id='r010-5a674db7-95aa-45c5-a2f1-a6aa9d7e93ad', key_id='r010-fe6cb103-60e6-46bc-9cb5-14e415990849', ssh_key_filename='/home/kpavel/.ssh/id_rsa', profile_name='bx2-2x8', vpc_id='r010-af1adda4-e4e5-4060-9aa2-7a0c981aff8e', min_workers=1, max_workers=1)
 ```
 
-Mandatory fields are:  api_key, region.
-Minimal example:
+Minimal example using mandatory fields:
 
 ```
 from ibm_ray_config import generate_config
@@ -71,3 +75,7 @@ api_key = <IAM_API_KEY>
 region = 'eu-de'
 config_file = generate_config(iam_api_key=api_key, region=region)
 ```
+
+
+### Testing and Utilization 
+To deploy a Ray cluster with the configuration created, we recommend using the  <a href="https://github.com/project-codeflare/gen2-connector"> Gen2-connector </a> by following the comprehensive instructions in the provided link.

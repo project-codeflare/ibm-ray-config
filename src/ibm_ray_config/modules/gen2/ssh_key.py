@@ -10,7 +10,7 @@ from ibm_ray_config.modules.utils import (Color, color_msg, find_default, find_n
                                         validate_exists, validate_not_empty)
 
 from ibm_cloud_sdk_core import ApiException
-DEFAULT_KEY_NAME = 'lithops-default'
+DEFAULT_KEY_NAME = 'default-ssh-key'
         
 def generate_keypair(keyname):
     """Returns newly generated public ssh-key's contents and private key's path"""
@@ -175,7 +175,7 @@ class SshKeyConfig(ConfigBuilder):
 
     @update_decorator
     def verify(self, base_config):
-        default_keyname = 'lithopscloud-default'
+        default_keyname = DEFAULT_KEY_NAME
         
         if base_config.get('ibm_vpc'):
             resource_group_id = base_config['ibm_vpc']['resource_group_id']
@@ -189,7 +189,7 @@ class SshKeyConfig(ConfigBuilder):
             private_res = subprocess.getoutput([f"ssh-keygen -y -f {ssh_key_filename} | cut -d' ' -f 2"])
             return public_res == private_res
 
-        # user specified both vpc key id and private key, just validate they ar ea pair
+        # user specified both vpc key id and private key, just validate they are a pair
         if self.defaults['key_id'] and self.defaults['ssh_key_filename']:
             if not is_pair(self.defaults['key_id'], self.defaults['ssh_key_filename']):
                 raise errors.ValidationError(

@@ -328,7 +328,7 @@ class VPCConfig(ConfigBuilder):
         else:
             vpc_objects = self.ibm_vpc_client.list_vpcs().result
             if vpc_objects['total_count'] > 0:
-                # return first vpc occurance
+                # return first vpc occurrence
                 vpc_obj = vpc_objects['vpcs'][0]
             else:
                 # create new vpc
@@ -341,7 +341,7 @@ class VPCConfig(ConfigBuilder):
                 print(f"\n\n\033[92mRegion {region} been selected\033[0m")
                         
                 vpc_obj = self.ibm_vpc_client.create_vpc(address_prefix_management='auto', classic_access=False,
-                                        name="lithopscloud-default-vpc", resource_group=resource_group).get_result()
+                                        name="ray-default-vpc", resource_group=resource_group).get_result()
             
                 print(f"\n\n\033[92mVPC {vpc_obj['name']} been created\033[0m")
             

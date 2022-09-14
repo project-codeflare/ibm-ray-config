@@ -29,7 +29,7 @@ def update_decorator(f):
 
 class ConfigBuilder:
     """
-    Interface for building IBM Cloud config files for Lithops and Ray
+    Interface for building IBM Cloud config files for Ray
     """
     iam_api_key, ibm_vpc_client, resource_service_client, resource_controller_service, compute_iam_endpoint, region = None, None, None, None, None, None
 

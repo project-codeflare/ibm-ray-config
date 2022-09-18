@@ -59,7 +59,7 @@ def validate_api_keys(base_config, modules, iam_api_key, compute_iam_endpoint):
 @click.option('--endpoint', help='IBM Cloud API endpoint')
 @click.option('--pr', '-g', help=f'Temporary workaround for ray gen2 only. If specified, use provider setup from PR github', is_flag=True, default=False)
 def builder(iam_api_key, output_file, input_file, version, compute_iam_endpoint, endpoint, pr):
-
+    defaults = None  # to be replaced by a flag  
     if version:
         print(f"{pkg_resources.get_distribution('ibm-ray-config').project_name} "
               f"{pkg_resources.get_distribution('ibm-ray-config').version}")
@@ -79,9 +79,7 @@ def builder(iam_api_key, output_file, input_file, version, compute_iam_endpoint,
     base_config['create_defaults'] = defaults
     base_config, modules = validate_api_keys(base_config, modules, iam_api_key, compute_iam_endpoint)
 
-    if endpoint and 'ibm_vpc' in base_config:
-        base_config['ibm_vpc']['endpoint'] = endpoint
-    elif endpoint and 'provider' in base_config:
+    if endpoint:
         base_config['provider']['endpoint'] = endpoint
 
     for module in modules:
@@ -108,7 +106,7 @@ def error(msg):
     raise Exception(msg)
 
 def generate_config(*args, **kwargs):
-    """A programmatic way to create configuration files, to be used externally by user."""
+    """A programmatic avenue to create configuration files. To be used externally by user."""
     backend = backends[0] # currently supporting a single backend
     _, output_file = verify_paths(None, None)
     

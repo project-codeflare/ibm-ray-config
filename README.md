@@ -18,11 +18,12 @@ pip install ibm-ray-config
 ```
 
 ## Usage
-Use the configuration tool as follows
+Use the configuration tool as follows:
 
 ```
-ibm-ray-config [--iam-api-key IAM_API_KEY] [-i INPUT_FILE] [-o OUTPUT_PATH] [--version] 
+ibm-ray-config [--iam-api-key IAM_API_KEY] [--endpoint ENDPOINT] [-i INPUT_FILE] [-o OUTPUT_PATH] [--compute-iam-endpoint IAM_ENDPOINT] [--version] 
 ```
+
 Get a short description of the available flags via ```ibm-ray-config --help```
 
 <br/>
@@ -36,6 +37,8 @@ Get a short description of the available flags via ```ibm-ray-config --help```
  | input-file    |<compute_backend>/defaults.py| no | Existing config file to be used as a template in the configuration process |
  | output-path   |A randomly generated path to a randomly named yaml file | no |A custom location the config file will be written to |
  | version       | | no |Returns ibm-ray-config's package version|
+ |endpoint| | no|Geographical location for deployment and scope for available resources by the IBM-VPC service. Endpoint urls are listed <a href="https://cloud.ibm.com/docs/vpc?topic=vpc-creating-a-vpc-in-a-different-region&interface=cli"> here</a>. |
+ compute_iam_endpoint|https://iam.cloud.ibm.com|no|Alternative IAM endpoint url for the cloud provider, e.g. https://iam.test.cloud.ibm.com|
 
 
 
@@ -76,6 +79,7 @@ region = 'eu-de'
 config_file = generate_config(iam_api_key=api_key, region=region)
 ```
 
+### Test and Usage 
+Attention: to run multiple clusters under the same VPC, make sure their cluster names (`cluster_name` in the config file) are unique.      
 
-### Testing and Utilization 
-To deploy a Ray cluster with the configuration created, we recommend using the  <a href="https://github.com/project-codeflare/gen2-connector"> Gen2-connector </a> by following the comprehensive instructions in the provided link.
+To deploy a Ray cluster with the configuration created, please use the <a href="https://github.com/project-codeflare/gen2-connector"> Gen2-connector </a>. Follow the instructions via the provided link to test your configuration files. 

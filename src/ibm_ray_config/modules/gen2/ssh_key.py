@@ -94,7 +94,7 @@ def register_ssh_key(ibm_vpc_client, config, auto=False):
         ssh_key_data, ssh_key_path = generate_keypair(keyname)
 
     response = None
-    try:
+    try:    # regardless of the above, try registering an ssh-key 
         response = ibm_vpc_client.create_key(public_key=ssh_key_data, name=keyname, resource_group={
                                         "id": resource_group_id}, type='rsa')
     except ApiException as e:
@@ -106,8 +106,8 @@ def register_ssh_key(ibm_vpc_client, config, auto=False):
             response = ibm_vpc_client.create_key(public_key=ssh_key_data, name=keyname, resource_group={
                                         "id": resource_group_id}, type='rsa')                
         else: 
-            if "Key with fingerprint already exists":
-                print(color_msg("Can't register an SSH key with the same public key on the same region",Color.RED))
+            if "Key with fingerprint already exists" in e.message:
+                print(color_msg("Can't register an SSH key with the same fingerprint",Color.RED))
             raise # can't continue the configuration process without a valid ssh key       
             
     print(f"\033[92mnew SSH key {keyname} been registered in vpc\033[0m")

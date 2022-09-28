@@ -2,7 +2,6 @@ import re
 from typing import Any, Dict
 
 import inquirer
-from rsa import verify
 from ibm_ray_config.modules.config_builder import ConfigBuilder
 from ibm_ray_config.modules.utils import find_default, get_option_from_list
 

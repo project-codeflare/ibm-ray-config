@@ -7,8 +7,8 @@ import yaml
 from ibm_ray_config.modules.utils import color_msg, Color, verify_paths
 
 # currently supporting configuration for ray above IBM Gen2 VPC. 
-IBM_GEN2 = 'IBM Gen2'
-backends =[{'name': IBM_GEN2, 'path': 'gen2.ray'}]
+IBM_VPC = 'IBM VPC'
+backends =[{'name': IBM_VPC, 'path': 'gen2.ray'}]
 
 def select_backend(input_file, default_config_suffix=''):
     """returns a base config file for the backend and its package """

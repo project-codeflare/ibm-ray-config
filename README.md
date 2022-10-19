@@ -45,7 +45,7 @@ Get a short description of the available flags via ```ibm-ray-config --help```
 ### Using ibm-ray-config Config Tool Programmatically
 Attention: though not all fields are mandatory, unspecified resources will be created automatically on the backend.
 
-#### IBM Gen2 VPC
+#### IBM VPC
 
 Mandatory fields are: `iam_api_key` and `region`.
 Processor architecture: Intel x86.    
@@ -82,4 +82,4 @@ config_file = generate_config(iam_api_key=api_key, region=region)
 ### Test and Usage 
 Attention: to run multiple clusters under the same VPC, make sure their cluster names (`cluster_name` in the config file) are unique.      
 
-To deploy a Ray cluster with the configuration created, please use the <a href="https://github.com/project-codeflare/gen2-connector"> Gen2-connector </a>. Follow the instructions via the provided link to test your configuration files. 
+To deploy a Ray cluster with the configuration created, please use the <a href="https://github.com/project-codeflare/ibm-vpc-ray-connector"> ibm-vpc-ray-connector </a>. Follow the instructions via the provided link to test your configuration files. 

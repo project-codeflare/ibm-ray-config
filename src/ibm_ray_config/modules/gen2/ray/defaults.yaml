@@ -114,8 +114,7 @@ setup_commands:
     - pip install ibm-vpc ibm_platform_services ibm_cloud_sdk_core ibm-vpc-ray-connector
     - apt install libgl1-mesa-glx -y && pip install pandas tabulate gym tensorboardX dm_tree opencv-python starlette uvicorn transformers torch
     - echo alias python=\'python3\'>>~/.bash_aliases
-    - which ray || pip install ray[default]
-    - which ray || pip install ray[serve]
+    - pip install ray[default] ray[serve]
 
 # Custom commands that will be run on the head node after common setup.
 head_setup_commands: []

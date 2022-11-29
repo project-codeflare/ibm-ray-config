@@ -142,6 +142,14 @@ def validate_not_empty(answers, current):
         raise errors.ValidationError('', reason=f"Key name can't be empty")
     return True
 
+def validate_cluster_name(answers, current):
+    if not current:
+        raise errors.ValidationError('', reason=f"Key name can't be empty")
+    pattern = re.compile("[a-zA-Z0-9_]+")
+    res = pattern.match(current)
+    if len(res.group())!=len(current):
+        raise errors.ValidationError('', reason=f"Cluster name doesn't adhere to pattern: '[a-zA-Z0-9_]+'")
+    return True
 
 def validate_exists(answers, current):
     if not current or not os.path.exists(os.path.abspath(os.path.expanduser(current))):

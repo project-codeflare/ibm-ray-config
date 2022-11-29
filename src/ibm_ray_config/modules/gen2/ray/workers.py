@@ -3,7 +3,7 @@ from typing import Any, Dict
 
 import inquirer
 from ibm_ray_config.modules.config_builder import ConfigBuilder
-from ibm_ray_config.modules.utils import find_default, get_option_from_list
+from ibm_ray_config.modules.utils import validate_cluster_name
 
 
 class WorkersConfig(ConfigBuilder):
@@ -15,7 +15,7 @@ class WorkersConfig(ConfigBuilder):
 
         question = [
             inquirer.Text(
-                'name', message="Cluster name, either leave default or type a new one", default=default_cluster_name),
+                'name', message="Enter cluster name following the pattern `[a-zA-Z0-9_]+`", validate = validate_cluster_name, default=default_cluster_name),
             inquirer.Text('min_workers', message="Minimum number of worker nodes",
                           default=default_min_workers, validate=lambda _, x: re.match('^[+]?[0-9]+$', x)),
             inquirer.Text('max_workers', message="Maximum number of worker nodes", default=default_max_workers,

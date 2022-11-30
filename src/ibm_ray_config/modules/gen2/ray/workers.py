@@ -15,7 +15,7 @@ class WorkersConfig(ConfigBuilder):
 
         question = [
             inquirer.Text(
-                'name', message="Enter cluster name following the pattern `[a-zA-Z0-9_]+`", validate = validate_cluster_name, default=default_cluster_name),
+                'name', message="Enter cluster name following the pattern `[a-z]|[a-z][-a-z0-9]*[a-z0-9]`", validate = validate_cluster_name, default=default_cluster_name),
             inquirer.Text('min_workers', message="Minimum number of worker nodes",
                           default=default_min_workers, validate=lambda _, x: re.match('^[+]?[0-9]+$', x)),
             inquirer.Text('max_workers', message="Maximum number of worker nodes", default=default_max_workers,

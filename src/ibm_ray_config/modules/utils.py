@@ -143,12 +143,18 @@ def validate_not_empty(answers, current):
     return True
 
 def validate_cluster_name(answers, current):
+    """
+    returns True if cluster name ray and IBM VPC VSI requirements.
+    since ray's cluster pattern of "^([a-zA-Z0-9_]+)$" is contained within the IBM's VSI pattern
+    of "^([a-z]|[a-z][-a-z0-9]*[a-z0-9])$" this validation assures compliance with the latter pattern. 
+    """
+    vsi_pattern = "^([a-z]|[a-z][-a-z0-9]*[a-z0-9])$"
     if not current:
         raise errors.ValidationError('', reason=f"Key name can't be empty")
-    pattern = re.compile("[a-zA-Z0-9_]+")
+    pattern = re.compile(vsi_pattern)
     res = pattern.match(current)
     if len(res.group())!=len(current):
-        raise errors.ValidationError('', reason=f"Cluster name doesn't adhere to pattern: '[a-zA-Z0-9_]+'")
+        raise errors.ValidationError('', reason=f"Cluster name doesn't adhere to pattern: {vsi_pattern}")
     return True
 
 def validate_exists(answers, current):

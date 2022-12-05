@@ -1,10 +1,10 @@
 import re
+import copy
 from typing import Any, Dict
 
 import inquirer
 from ibm_ray_config.modules.config_builder import ConfigBuilder
-from ibm_ray_config.modules.utils import validate_cluster_name
-
+from ibm_ray_config.modules.utils import validate_cluster_name, get_profile_resources
 
 class WorkersConfig(ConfigBuilder):
 
@@ -21,23 +21,28 @@ class WorkersConfig(ConfigBuilder):
             inquirer.Text('max_workers', message="Maximum number of worker nodes", default=default_max_workers,
                           validate=lambda answers, x: re.match('^[+]?[0-9]+$', x) and int(x) >= int(answers['min_workers']))
         ]
-
         answers = inquirer.prompt(question, raise_keyboard_interrupt=True)
         self.base_config['cluster_name'] = answers['name']
         self.base_config['max_workers'] = int(answers['max_workers'])
 
-        if self.base_config.get('available_node_types'):
-            for available_node_type in self.base_config['available_node_types']:
-                self.base_config['available_node_types'][available_node_type]['min_workers'] = int(
-                    answers['min_workers'])
-                self.base_config['available_node_types'][available_node_type]['max_workers'] = int(
-                    answers['max_workers'])
-        else:
-            self.base_config['available_node_types']['ray_head_default']['min_workers'] = int(
-                answers['min_workers'])
-            self.base_config['available_node_types']['ray_head_default']['max_workers'] = int(
-                answers['max_workers'])
+        if self.base_config['worker_instance_profile']:
+            self.base_config['available_node_types']['ray_head_default']['min_workers'] = 0 
+            self.base_config['available_node_types']['ray_head_default']['max_workers'] = 0
 
+            worker_dict = copy.deepcopy(self.base_config['available_node_types']['ray_head_default'])
+            worker_dict['node_config'].pop('head_ip',None)
+
+            worker_dict['min_workers'] = int(answers['min_workers'])
+            worker_dict['max_workers'] = int(answers['max_workers'])
+            worker_dict['node_config']['instance_profile_name'] = self.base_config['worker_instance_profile']
+            worker_dict['resources']['CPU'], worker_dict['resources']['GPU'] = get_profile_resources(self.base_config['worker_instance_profile'])
+
+            self.base_config['available_node_types']['ray_worker_default'] = worker_dict
+        else:
+            self.base_config['available_node_types']['ray_head_default']['min_workers'] = int(answers['min_workers'])
+            self.base_config['available_node_types']['ray_head_default']['max_workers'] = int(answers['max_workers'])
+
+        del self.base_config['worker_instance_profile']
         return self.base_config
     
     def verify(self, base_config):

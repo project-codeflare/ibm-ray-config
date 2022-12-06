@@ -25,7 +25,7 @@ class WorkersConfig(ConfigBuilder):
         self.base_config['cluster_name'] = answers['name']
         self.base_config['max_workers'] = int(answers['max_workers'])
 
-        if self.base_config['worker_instance_profile']:
+        if self.base_config.get('worker_instance_profile', None):
             self.base_config['available_node_types']['ray_head_default']['min_workers'] = 0 
             self.base_config['available_node_types']['ray_head_default']['max_workers'] = 0
 
@@ -42,11 +42,11 @@ class WorkersConfig(ConfigBuilder):
             worker_dict['resources']['CPU'] = cpu
 
             self.base_config['available_node_types']['ray_worker_default'] = worker_dict
+            del self.base_config['worker_instance_profile']
         else:
             self.base_config['available_node_types']['ray_head_default']['min_workers'] = int(answers['min_workers'])
             self.base_config['available_node_types']['ray_head_default']['max_workers'] = int(answers['max_workers'])
 
-        del self.base_config['worker_instance_profile']
         return self.base_config
     
     def verify(self, base_config):

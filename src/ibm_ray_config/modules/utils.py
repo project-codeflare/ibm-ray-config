@@ -231,7 +231,7 @@ def get_confirmation(msg, default=None):
                          ), ]
     answer = inquirer.prompt(questions, raise_keyboard_interrupt=True)
 
-    return answer
+    return answer['answer']
 
 
 def retry_on_except(retries, sleep_duration, error_msg='', default=None):

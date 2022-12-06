@@ -343,6 +343,13 @@ def color_msg(msg, color=None, style=None, background=None):
 
     return init + font + 'm' + msg + end
 
+def get_profile_resources(instance_profile):
+    profile_resources_str = instance_profile.split('-')[1]
+    # gpu number based on profile
+    gpu_num = int(profile_resources_str.split('x')[2].split('v')[0]) if len(profile_resources_str.split('x'))==3 else None
+    # cpu number based on profile
+    cpu_num = int(profile_resources_str.split('x')[0])
+    return cpu_num, gpu_num
 
 class Color(Enum):
     BLACK = '30'

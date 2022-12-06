@@ -5,10 +5,10 @@ from ibm_ray_config.modules.gen2.ray.image import RayImageConfig
 from ibm_ray_config.modules.gen2.ray.ssh_key import RaySshKeyConfig
 from ibm_ray_config.modules.gen2.ray.vpc import RayVPCConfig
 from ibm_ray_config.modules.gen2.ray.workers import WorkersConfig
-from ibm_ray_config.modules.gen2.ray.profile import RayProfileConfig
+from ibm_ray_config.modules.gen2.profile import ProfileConfig
 
 MODULES = [RayApiKeyConfig, RayEndpointConfig, RayVPCConfig,
-           RaySshKeyConfig, RayImageConfig, FloatingIpConfig, WorkersConfig, RayProfileConfig]
+           RaySshKeyConfig, RayImageConfig, FloatingIpConfig, ProfileConfig, WorkersConfig]
 
 from ibm_ray_config.main import load_base_config
 

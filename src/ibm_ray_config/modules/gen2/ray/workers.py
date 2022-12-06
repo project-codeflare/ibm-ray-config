@@ -35,7 +35,11 @@ class WorkersConfig(ConfigBuilder):
             worker_dict['min_workers'] = int(answers['min_workers'])
             worker_dict['max_workers'] = int(answers['max_workers'])
             worker_dict['node_config']['instance_profile_name'] = self.base_config['worker_instance_profile']
-            worker_dict['resources']['CPU'], worker_dict['resources']['GPU'] = get_profile_resources(self.base_config['worker_instance_profile'])
+            
+            cpu,gpu = get_profile_resources(self.base_config['worker_instance_profile'])
+            if gpu:
+                worker_dict['resources']['GPU'] = gpu
+            worker_dict['resources']['CPU'] = cpu
 
             self.base_config['available_node_types']['ray_worker_default'] = worker_dict
         else:

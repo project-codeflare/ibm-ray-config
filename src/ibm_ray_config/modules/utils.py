@@ -1,11 +1,13 @@
 import importlib
 import os
 import re
+import shutil
 import subprocess
 import sys
-import tempfile
+import yaml
 import time
 from enum import Enum
+import uuid
 import inquirer
 from inquirer import errors
 from ibm_platform_services import IamIdentityV1
@@ -287,12 +289,11 @@ def verify_paths(input_path, output_path, verify_config=False):
 
     def _is_valid_output_path(path):
         """:returns path if it's either a valid absolute path, or a file name to be appended to current directory"""
-        dir_file = path.rsplit('/', 1)
-        prefix_directory = dir_file[0]
-        if len(dir_file) == 1 or os.path.isdir(prefix_directory):
+        
+        if os.path.isdir(path):
             return path
         else:
-            print(color_msg(f"{prefix_directory} doesn't lead to an existing directory", color=Color.RED))
+            print(color_msg(f"{path} doesn't lead to an existing directory", color=Color.RED))
 
     def _prompt_user(path, default_config_file, verify_func, request, default_msg):
         while True:
@@ -309,7 +310,7 @@ def verify_paths(input_path, output_path, verify_config=False):
         input_path = _prompt_user(input_path, '', _is_valid_input_path,
                                   "Provide a path to your existing config file, or leave blank to configure from template",
                                   'Using default input file\n')
-    output_path = _prompt_user(output_path, tempfile.mkstemp(suffix='.yaml')[1], _is_valid_output_path,
+    output_path = _prompt_user(output_path, os.getcwd(), _is_valid_output_path,
                                "Provide a custom path for your config file, or leave blank for default output location",
                                'Using default output path\n')
     return input_path, output_path
@@ -344,12 +345,47 @@ def color_msg(msg, color=None, style=None, background=None):
     return init + font + 'm' + msg + end
 
 def get_profile_resources(instance_profile):
+    """returns the cpu, memory and gpu of specified instance profile"""
+    
     profile_resources_str = instance_profile.split('-')[1]
     # gpu number based on profile
     gpu_num = int(profile_resources_str.split('x')[2].split('v')[0]) if len(profile_resources_str.split('x'))==3 else None
     # cpu number based on profile
     cpu_num = int(profile_resources_str.split('x')[0])
-    return cpu_num, gpu_num
+    # memory GBs on profile
+    memory_num = int(profile_resources_str.split('x')[1])
+
+    return cpu_num, memory_num, gpu_num
+
+
+def dump_cluster_folder(config, output_folder):
+    if not os.path.isdir(output_folder):
+        os.mkdir(output_folder)
+    cluster_folder = os.path.join(output_folder, f"ray-cluster-{config['cluster_name']}-{str(uuid.uuid4())[:5]}")
+
+    # dump cluster config_file
+    cluster_file = f"cluster-{config['cluster_name']}-config.yaml" # extracting: {cluster_name}-{uuid}
+    cluster_file_path = os.path.join(cluster_folder,cluster_file)
+    os.mkdir(cluster_folder)
+    with open(cluster_file_path, 'w') as file:
+        yaml.dump(config, file, default_flow_style=False)
+    private_key = os.path.expanduser(config['auth']['ssh_private_key'])
+    public_key = private_key + '.pub'
+    # copy private ssh file
+    shutil.copyfile(private_key, os.path.join(cluster_folder,private_key.rsplit('/',1)[-1]))
+    # copy public ssh file
+    shutil.copyfile(public_key, os.path.join(cluster_folder,public_key.rsplit('/',1)[-1]))
+
+    # create script file        
+    with open(os.path.join(cluster_folder,'script.sh'), 'w') as script:
+        script.writelines([
+            "#!/bin/bash",
+        f"\nray up -y {cluster_file_path}",
+        f"\nray dashboard --port 8265 --remote-port 8265 {cluster_file_path}"]
+        )
+
+    return cluster_folder
+
 
 class Color(Enum):
     BLACK = '30'

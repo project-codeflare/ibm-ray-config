@@ -62,12 +62,13 @@ def register_ssh_key(ibm_vpc_client, config, auto=False):
 
     EXISTING_CONTENTS = 'Paste existing public key contents'
     EXISTING_PATH = 'Provide path to existing public key'
-    GENERATE_NEW = 'Generate new public key'
+    GENERATE_NEW = f'Generate new public key {color_msg("[Best Practice]",Color.LIGHTGREEN)}'
 
     questions = [
         inquirer.List('answer',
                       message="Please choose",
-                      choices=[EXISTING_PATH, EXISTING_CONTENTS, GENERATE_NEW]
+                      choices=[GENERATE_NEW, EXISTING_PATH, EXISTING_CONTENTS],
+                      default=GENERATE_NEW
                       )]
 
     if not auto:
@@ -147,11 +148,11 @@ class SshKeyConfig(ConfigBuilder):
 
         ssh_key_objects = get_ssh_key_objects()
 
-        CREATE_NEW_SSH_KEY = "Register new SSH key in IBM VPC"
+        CREATE_NEW_SSH_KEY = f"""Register new SSH key in IBM VPC {color_msg("[Best Practice]",Color.LIGHTGREEN)}"""
 
         default = find_default(self.defaults, ssh_key_objects, id='key_id')
         ssh_key_name, ssh_key_id = find_name_id(
-            ssh_key_objects, 'Choose ssh key', do_nothing=CREATE_NEW_SSH_KEY, default=default)
+            ssh_key_objects, 'Choose ssh key', do_nothing=CREATE_NEW_SSH_KEY, default=CREATE_NEW_SSH_KEY)
 
         ssh_key_path = None
         if not ssh_key_name:

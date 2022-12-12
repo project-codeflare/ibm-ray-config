@@ -4,7 +4,7 @@ import os
 import click
 import yaml
 
-from ibm_ray_config.modules.utils import color_msg, Color, verify_paths
+from ibm_ray_config.modules.utils import color_msg, Color, verify_paths, dump_cluster_folder
 
 # currently supporting configuration for ray above IBM Gen2 VPC. 
 IBM_VPC = 'IBM VPC'
@@ -51,14 +51,14 @@ def validate_api_keys(base_config, modules, iam_api_key, compute_iam_endpoint):
     return base_config, modules
     
 @click.command()
-@click.option('--output-file', '-o', help='Output filename to save configurations')
+@click.option('--output-folder', '-o', help='Output folder to save configurations')
 @click.option('--input-file', '-i', help=f'Template for the new configuration')
 @click.option('--iam-api-key', '-a', help='IAM_API_KEY')
 @click.option('--version', '-v', help=f'Get package version', is_flag=True)
 @click.option('--compute-iam-endpoint', help='IAM endpoint url used for compute instead of default https://iam.cloud.ibm.com')
 @click.option('--endpoint', help='IBM Cloud API endpoint')
 @click.option('--pr', '-g', help=f'Temporary workaround for ray gen2 only. If specified, use provider setup from PR github', is_flag=True, default=False)
-def builder(iam_api_key, output_file, input_file, version, compute_iam_endpoint, endpoint, pr):
+def builder(iam_api_key, output_folder, input_file, version, compute_iam_endpoint, endpoint, pr):
     defaults = None  # to be replaced by a flag  
     if version:
         print(f"{pkg_resources.get_distribution('ibm-ray-config').project_name} "
@@ -67,7 +67,7 @@ def builder(iam_api_key, output_file, input_file, version, compute_iam_endpoint,
 
     print(color_msg("\nWelcome to ibm_ray_config export helper\n", color=Color.YELLOW))
 
-    input_file, output_file = verify_paths(input_file, output_file)
+    input_file, output_folder = verify_paths(input_file, output_folder)
 
     default_config_suffix = ''
     if pr:
@@ -89,17 +89,13 @@ def builder(iam_api_key, output_file, input_file, version, compute_iam_endpoint,
             base_config = next_module.create_default()
         else:
             base_config = next_module.run()
+    del base_config['create_defaults']
 
-    with open(output_file, 'w') as outfile:
-        del base_config['create_defaults']
-        yaml.dump(base_config, outfile, default_flow_style=False)
-
-    if hasattr(backend_pkg, 'finish_message'):
-        print(backend_pkg.finish_message(output_file))
-    else:
-        print("\n\n=================================================")
-        print(color_msg(f"Cluster config file: {output_file}", color=Color.LIGHTGREEN))
-        print("=================================================")
+    cluster_folder = dump_cluster_folder(base_config, output_folder)
+    
+    print("\n\n=================================================")
+    print(color_msg(f"Cluster config folder: {cluster_folder}", color=Color.LIGHTGREEN))
+    print("=================================================")
 
 def error(msg):
     print(msg)

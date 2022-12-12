@@ -35,7 +35,7 @@ Get a short description of the available flags via ```ibm-ray-config --help```
  |---|---|---|---|
  | iam-api-key   | |yes|IBM Cloud API key. To generate a new API Key, adhere to the following [guide](https://www.ibm.com/docs/en/spectrumvirtualizecl/8.1.3?topic=installing-creating-api-key)
  | input-file    |<compute_backend>/defaults.py| no | Existing config file to be used as a template in the configuration process |
- | output-path   |A randomly generated path to a randomly named yaml file | no |A custom location the config file will be written to |
+ | output-path   |A randomly generated path to a folder | no |A custom location for the program's outputs |
  | version       | | no |Returns ibm-ray-config's package version|
  |endpoint| | no|Geographical location for deployment and scope for available resources by the IBM-VPC service. Endpoint urls are listed <a href="https://cloud.ibm.com/docs/vpc?topic=vpc-creating-a-vpc-in-a-different-region&interface=cli"> here</a>. |
  compute_iam_endpoint|https://iam.cloud.ibm.com|no|Alternative IAM endpoint url for the cloud provider, e.g. https://iam.test.cloud.ibm.com|

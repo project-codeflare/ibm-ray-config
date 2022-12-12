@@ -28,10 +28,11 @@ class ProfileConfig(ConfigBuilder):
             self.base_config['worker_instance_profile'] = get_option_from_list(
                 'Choose instance profile for the worker node, please refer to https://cloud.ibm.com/docs/vpc?topic=vpc-profiles', instance_profile_objects, default=default)['name']
             
-        cpu_num, gpu_num = get_profile_resources(head_instance_profile)
+        cpu_num, memory, gpu_num = get_profile_resources(head_instance_profile)
 
         self.base_config['available_node_types']['ray_head_default']['node_config']['instance_profile_name'] = head_instance_profile
         self.base_config['available_node_types']['ray_head_default']['resources']['CPU'] = cpu_num
+        self.base_config['available_node_types']['ray_head_default']['resources']['memory'] = memory
         if gpu_num:
             self.base_config['available_node_types']['ray_head_default']['resources']['GPU'] = gpu_num
         

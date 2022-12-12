@@ -2,10 +2,11 @@ from typing import Any, Dict
 
 import inquirer
 from ibm_ray_config.modules.gen2.vpc import VPCConfig
+from ibm_ray_config.modules.utils import get_confirmation
 
-REQUIRED_RULES = {'outbound_tcp_all': 'selected security group is missing rule permitting outbound TCP access\n', 'outbound_udp_all': 'selected security group is missing rule permitting outbound UDP access\n', 'inbound_tcp_sg': 'selected security group is missing rule permiting inbound tcp traffic inside selected security group\n',
-                  'inbound_tcp_22': 'selected security group is missing rule permiting inbound traffic to tcp port 22 required for ssh\n', 'inbound_tcp_6379': 'selected security group is missing rule permiting inbound traffic to tcp port 6379 required for Redis\n', 'inbound_tcp_8265': 'selected security group is missing rule permiting inbound traffic to tcp port 8265 required to access Ray Dashboard\n'}
-
+REQUIRED_RULES = {'outbound_tcp_all': 'selected security group is missing rule permitting outbound TCP access\n', 'outbound_udp_all': 'selected security group is missing rule permitting outbound UDP access\n', 'inbound_tcp_sg': 'selected security group is missing rule permitting inbound tcp traffic inside selected security group\n',
+                  'inbound_tcp_22': 'selected security group is missing rule permitting inbound traffic to tcp port 22 required for ssh\n'}
+INSECURE_RULES = {'inbound_tcp_6379': 'selected security group is missing rule permitting inbound traffic to tcp port 6379 required for Redis\n', 'inbound_tcp_8265': 'selected security group is missing rule permitting inbound traffic to tcp port 8265 required to access Ray Dashboard\n'}
 
 def validate_security_group(ibm_vpc_client, sec_group_id):
     errors = validate_security_group_rules(ibm_vpc_client, sec_group_id)
@@ -39,6 +40,10 @@ def validate_security_group(ibm_vpc_client, sec_group_id):
 
 
 def validate_security_group_rules(ibm_vpc_client, sg_id):
+    """
+    returns unsatisfied security group rules.
+    """
+
     required_rules = REQUIRED_RULES.copy()
 
     sg = ibm_vpc_client.get_security_group(sg_id).get_result()
@@ -154,6 +159,10 @@ class RayVPCConfig(VPCConfig):
 
     def __init__(self, base_config: Dict[str, Any]) -> None:
         super().__init__(base_config)
+        
+        is_insecure = get_confirmation("Would you like to open insecure ports: 6379 and 8265?", default=False)
+        if is_insecure:
+            REQUIRED_RULES.update(INSECURE_RULES)
 
         self.vpc_name = 'ray-cluster-vpc'
         self.sg_rules = REQUIRED_RULES

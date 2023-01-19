@@ -155,7 +155,7 @@ def validate_cluster_name(answers, current):
         raise errors.ValidationError('', reason=f"Key name can't be empty")
     pattern = re.compile(vsi_pattern)
     res = pattern.match(current)
-    if len(res.group())!=len(current):
+    if not res or len(res.group())!=len(current):
         raise errors.ValidationError('', reason=f"Cluster name doesn't adhere to pattern: {vsi_pattern}")
     return True
 

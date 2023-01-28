@@ -1,7 +1,6 @@
-# Ray Configuration Generator For IBM-Cloud Services
+# Ray VPC allocator / Configuration Generator For IBM VPC
 
-ibm-ray-config is a CLI tool that greatly simplifies user experience by generating Ray configuration files for IBM services.
-Currently supporting only IBM Virtual Private Cloud (VPC).
+`ibm-ray-config` is a CLI tool that seamlessly allocates and registers VPC resources, such as: subnets, gateways, ips, ssh keys and security groups rules to generate Ray configuration files for IBM VPC.
 
 ## Setup
 
@@ -82,4 +81,8 @@ config_file = generate_config(iam_api_key=api_key, region=region)
 ### Test and Usage 
 Attention: to run multiple clusters under the same VPC, make sure their cluster names (`cluster_name` in the config file) are unique.      
 
-To deploy a Ray cluster with the configuration created, please use the <a href="https://github.com/project-codeflare/ibm-vpc-ray-connector"> ibm-vpc-ray-connector </a>. Follow the instructions via the provided link to test your configuration files. 
+To deploy a Ray cluster with the configuration created, please use the <a href="https://github.com/project-codeflare/ibm-vpc-ray-connector"> ibm-vpc-ray-connector </a>. Follow the instructions via the provided link to test your configuration files.
+
+## Execution Example
+![part1](doc-assets/example1.png?raw=true)
+![part2](doc-assets/example2.png?raw=true)

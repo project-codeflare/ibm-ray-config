@@ -1,28 +1,39 @@
 import re
 import copy
 from typing import Any, Dict
-
+from uuid import uuid4
 import inquirer
 from ibm_ray_config.modules.config_builder import ConfigBuilder
-from ibm_ray_config.modules.utils import validate_cluster_name, get_profile_resources
+from ibm_ray_config.modules.utils import CACHE, free_dialog, validate_name, get_profile_resources
 
 class WorkersConfig(ConfigBuilder):
+    def __init__(self, base_config: Dict[str, Any]) -> None:
+        super().__init__(base_config)
+        self.cluster_name_scheme = f'cluster-at-{CACHE["vpc_name"]}-{str(uuid4())[:5]}'
+    
 
     def run(self) -> Dict[str, Any]:
-        default_cluster_name = self.base_config.get('cluster_name', 'default')
+        default_cluster_prefix = self.base_config.get('cluster_name')
+        if not default_cluster_prefix:
+            default_cluster_prefix = self.cluster_name_scheme.split('-at',1)[0]
         default_min_workers = self.base_config.get('min_workers', '0')
         default_max_workers = default_min_workers
 
         question = [
-            inquirer.Text(
-                'name', message="Enter cluster name following the pattern `[a-z]|[a-z][-a-z0-9]*[a-z0-9]`", validate = validate_cluster_name, default=default_cluster_name),
             inquirer.Text('min_workers', message="Minimum number of worker nodes",
                           default=default_min_workers, validate=lambda _, x: re.match('^[+]?[0-9]+$', x)),
             inquirer.Text('max_workers', message="Maximum number of worker nodes", default=default_max_workers,
                           validate=lambda answers, x: re.match('^[+]?[0-9]+$', x) and int(x) >= int(answers['min_workers']))
         ]
+
+        print(f"\ncluster name is {self.cluster_name_scheme}")
+        cluster_prefix = free_dialog(msg= f"Pick a custom name to replace: '{default_cluster_prefix}'(or Enter for default)",
+                                default=default_cluster_prefix,
+                                validate=validate_name)['answer']
         answers = inquirer.prompt(question, raise_keyboard_interrupt=True)
-        self.base_config['cluster_name'] = answers['name']
+        # replaces first word of self.cluster_name_scheme with user input.
+        cluster_name = self.cluster_name_scheme.replace(default_cluster_prefix, cluster_prefix)
+        self.base_config['cluster_name'] = cluster_name
         self.base_config['max_workers'] = int(answers['max_workers'])
 
         if self.base_config.get('worker_instance_profile', None):

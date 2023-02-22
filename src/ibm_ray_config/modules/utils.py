@@ -7,7 +7,7 @@ import sys
 import yaml
 import time
 from enum import Enum
-import uuid
+from pathlib import Path
 import inquirer
 from inquirer import errors
 from ibm_platform_services import IamIdentityV1
@@ -144,7 +144,7 @@ def validate_not_empty(answers, current):
         raise errors.ValidationError('', reason=f"Key name can't be empty")
     return True
 
-def validate_cluster_name(answers, current):
+def validate_name(answers, current):
     """
     returns True if cluster name ray and IBM VPC VSI requirements.
     since ray's cluster pattern of "^([a-zA-Z0-9_]+)$" is contained within the IBM's VSI pattern
@@ -152,11 +152,11 @@ def validate_cluster_name(answers, current):
     """
     vsi_pattern = "^([a-z]|[a-z][-a-z0-9]*[a-z0-9])$"
     if not current:
-        raise errors.ValidationError('', reason=f"Key name can't be empty")
+        raise errors.ValidationError('', reason=f"Name can't be empty")
     pattern = re.compile(vsi_pattern)
     res = pattern.match(current)
     if not res or len(res.group())!=len(current):
-        raise errors.ValidationError('', reason=f"Cluster name doesn't adhere to pattern: {vsi_pattern}")
+        raise errors.ValidationError('', reason=f"Name must adhere to pattern: {vsi_pattern}")
     return True
 
 def validate_exists(answers, current):
@@ -281,18 +281,18 @@ def verify_paths(input_path, output_path, verify_config=False):
     """:returns a valid input and output path files, in accordance with provided paths.
         if a given path is invalid, and user is unable to rectify, a default path will be chosen in its stead. """
 
-    def _is_valid_input_path(path):
+    def _is_valid_input_file(path):
         if not os.path.isfile(path):
             print(color_msg(f"\nError - Path: '{path}' doesn't point to a file. ", color=Color.RED))
             return False
         return True
 
-    def _is_valid_output_path(path):
+    def _is_valid_output_dir(path):
         """:returns path if it's either a valid absolute path, or a file name to be appended to current directory"""
         
         if os.path.isdir(path):
             return path
-        else:
+        else: # returns None
             print(color_msg(f"{path} doesn't lead to an existing directory", color=Color.RED))
 
     def _prompt_user(path, default_config_file, verify_func, request, default_msg):
@@ -307,10 +307,10 @@ def verify_paths(input_path, output_path, verify_config=False):
                 path = free_dialog(request)['answer']
 
     if not verify_config:
-        input_path = _prompt_user(input_path, '', _is_valid_input_path,
+        input_path = _prompt_user(input_path, '', _is_valid_input_file,
                                   "Provide a path to your existing config file, or leave blank to configure from template",
                                   'Using default input file\n')
-    output_path = _prompt_user(output_path, os.getcwd(), _is_valid_output_path,
+    output_path = _prompt_user(output_path, os.getcwd(), _is_valid_output_dir,
                                "Provide a custom path for your config file, or leave blank for default output location",
                                'Using default output path\n')
     return input_path, output_path
@@ -357,32 +357,80 @@ def get_profile_resources(instance_profile):
 
     return cpu_num, memory_num, gpu_num
 
+def write_script(script_name:str, path:str, content:list, run_from_cluster_dir = True):
+    """creates a script named 'script_name' at 'path' folder
+     with 'content' as script commands. also add +x permission"""
+    
+    USE_BASH = ['#!/bin/bash\n']
+    CD_TO_CLUSTER_DIR = ['SCRIPTS_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )\n',
+                        'CLUSTER_DIR=$(dirname "$SCRIPTS_DIR")\n',
+                        'cd $CLUSTER_DIR\n']
+    RETURN_TO_ORIGINAL_DIR = ['\ncd --']
+    if run_from_cluster_dir:
+        CMD = CD_TO_CLUSTER_DIR+content+RETURN_TO_ORIGINAL_DIR
+    else:
+        CMD = content
+    file_path = os.path.join(path, script_name)
+    with open(file_path, 'w') as script:
+        script.writelines(USE_BASH+CMD)
+        # add execute permissions to file's current permissions
+        current_permissions = os.stat(file_path).st_mode
+        new_permissions = current_permissions | 0o111
+        os.chmod(file_path, new_permissions)  
 
 def dump_cluster_folder(config, output_folder):
+
+    # create a output_folder and scripts_folder if doesn't exist
     if not os.path.isdir(output_folder):
         os.mkdir(output_folder)
-    cluster_folder = os.path.join(output_folder, f"ray-cluster-{config['cluster_name']}-{str(uuid.uuid4())[:5]}")
+    cluster_folder = os.path.join(output_folder, f"{config['cluster_name']}")
+    scripts_folder = os.path.join(cluster_folder, f"scripts")
+    os.makedirs(cluster_folder, exist_ok=True) # directory already exists
+    os.makedirs(scripts_folder, exist_ok=True) # directory already exists
 
-    # dump cluster config_file
-    cluster_file = f"cluster-{config['cluster_name']}-config.yaml" # extracting: {cluster_name}-{uuid}
-    cluster_file_path = os.path.join(cluster_folder,cluster_file)
-    os.mkdir(cluster_folder)
+    cluster_file = "config.yaml"
+    cluster_file_path = os.path.join(cluster_folder, cluster_file)
+
+    # get source path of ssh keys and extract their name
+    original_private_key_path = os.path.expanduser(config['auth']['ssh_private_key'])
+    original_public_key_path = original_private_key_path+'.pub'
+    private_key_name = original_private_key_path.rsplit('/',1)[-1]
+
+    # update ssh key path to output folder
+    new_private_key_path = os.path.join(cluster_folder, private_key_name)
+    new_public_key_path = new_private_key_path+'.pub'
+    config['auth']['ssh_private_key'] = Path(new_private_key_path).name
+
+     # dump config to cluster cluster_file
     with open(cluster_file_path, 'w') as file:
         yaml.dump(config, file, default_flow_style=False)
-    private_key = os.path.expanduser(config['auth']['ssh_private_key'])
-    public_key = private_key + '.pub'
-    # copy private ssh file
-    shutil.copyfile(private_key, os.path.join(cluster_folder,private_key.rsplit('/',1)[-1]))
-    # copy public ssh file
-    shutil.copyfile(public_key, os.path.join(cluster_folder,public_key.rsplit('/',1)[-1]))
+    
+    # move keys if generated on this run (located in /tmp), else copy from original location  
+    copy_or_move_file = shutil.move if 'tmp' in original_private_key_path else shutil.copyfile
+    copy_or_move_file(original_private_key_path, new_private_key_path)
+    copy_or_move_file(original_public_key_path, new_public_key_path)
 
-    # create script file        
-    with open(os.path.join(cluster_folder,'script.sh'), 'w') as script:
-        script.writelines([
-            "#!/bin/bash",
-        f"\nray up -y {cluster_file_path}",
-        f"\nray dashboard --port 8265 --remote-port 8265 {cluster_file_path}"]
-        )
+    write_script('create.sh',
+                scripts_folder,
+                [f"ray up -y {cluster_file_path}"])
+
+    write_script('connect.sh',
+                scripts_folder,
+                [f"ray dashboard --port 8265 --remote-port 8265 {cluster_file_path}"])
+
+    # kill tunnel created by ray dashboard by killing the PIDs involved
+    write_script('disconnect.sh',
+                scripts_folder,
+                ["lsof -i:8265 | awk 'NR>1 {print $2}' | sort -u | xargs kill"],
+                run_from_cluster_dir = False)
+        
+    write_script('terminate.sh',
+                scripts_folder,
+                [f"ray down -y {cluster_file_path}"])
+
+    write_script('ray.sh',
+                scripts_folder,
+                [f"ray $@"])
 
     return cluster_folder
 

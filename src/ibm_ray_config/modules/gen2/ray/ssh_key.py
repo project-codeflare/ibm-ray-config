@@ -10,10 +10,10 @@ class RaySshKeyConfig(SshKeyConfig):
             for available_node_type in self.base_config['available_node_types']:
                 self.defaults['key_id'] = self.base_config['available_node_types'][available_node_type]['node_config'].get('key_id')
                 break
-
+        # collects default value for the question regrading ssh_private_key location 
         self.defaults['ssh_key_filename'] = self.base_config['auth']['ssh_private_key']
 
-    def update_config(self, ssh_key_id, ssh_key_path, ssh_user):        
+    def update_config(self, ssh_key_id, ssh_key_path, ssh_user):
         self.base_config['auth']['ssh_private_key'] = ssh_key_path
         self.base_config['auth']['ssh_user'] = ssh_user
 

@@ -2,29 +2,24 @@ import os
 import subprocess
 from typing import Any, Dict
 from pathlib import Path
-
+from uuid import uuid4
 import inquirer
 from inquirer import errors
 from ibm_ray_config.modules.config_builder import ConfigBuilder, update_decorator, spinner
 from ibm_ray_config.modules.utils import (Color, color_msg, find_default, find_name_id,
-                                        validate_exists, validate_not_empty)
+                                        validate_exists, validate_not_empty, free_dialog)
 
 from ibm_cloud_sdk_core import ApiException
-DEFAULT_KEY_NAME = 'default-ssh-key'
+DEFAULT_KEY_NAME = f'ray-{os.environ.get("USERNAME")}-{str(uuid4())[:5]}'
         
-def generate_keypair(keyname):
+def generate_keypair():
     """Returns newly generated public ssh-key's contents and private key's path"""
-    home = str(Path.home())
-    filename = f"{home}{os.sep}.ssh{os.sep}id.rsa.{keyname}"
-    try:
-        os.remove(filename)
-    except Exception:
-        pass
+    filename = f"{os.sep}tmp{os.sep}{DEFAULT_KEY_NAME}"
 
     os.system(f'ssh-keygen -b 2048 -t rsa -f {filename} -q -N ""')
     print(f"\n\n\033[92mSSH key pair been generated\n")
-    print(f"private key: {os.path.abspath(filename)}")
-    print(f"public key {os.path.abspath(filename)}.pub\033[0m")
+    print(f"private key intermediate location: {os.path.abspath(filename)}")
+    print(f"public key intermediate location: {os.path.abspath(filename)}.pub\033[0m")
     with open(f"{filename}.pub", 'r') as file:
         ssh_key_data = file.read()
     ssh_key_path = os.path.abspath(filename)
@@ -37,8 +32,12 @@ def get_ssh_key(ibm_vpc_client, name):
             return key
                     
 def register_ssh_key(ibm_vpc_client, config, auto=False):
-    """Returns the key's name on the VPC platform, it's public key's contents and the local path to it.
+    """Returns:
+        1. key's name on the VPC platform.
+        2. it's public key's contents. 
+        3. local path to private key ONLY if user generated a key, ELSE None.
         Registers an either existing or newly generated ssh-key to a specific VPC. """
+    
     if config.get('ibm_vpc'):
         resource_group_id = config['ibm_vpc']['resource_group_id']
     else:
@@ -46,19 +45,7 @@ def register_ssh_key(ibm_vpc_client, config, auto=False):
             resource_group_id = config['available_node_types'][available_node_type]['node_config']['resource_group_id']
             break
 
-    
-    questions = [
-            inquirer.Text(
-                'keyname', message='Please specify a name for the new key', validate=validate_not_empty)
-    ]
-    
-    answers = {}
-    if not auto:
-        answers = inquirer.prompt(questions, raise_keyboard_interrupt=True)
-    else:
-        answers['keyname'] = DEFAULT_KEY_NAME
-
-    keyname = answers['keyname']
+    keyname = DEFAULT_KEY_NAME
 
     EXISTING_CONTENTS = 'Paste existing public key contents'
     EXISTING_PATH = 'Provide path to existing public key'
@@ -76,11 +63,11 @@ def register_ssh_key(ibm_vpc_client, config, auto=False):
     else:
         answers["answer"] = GENERATE_NEW
 
-    ssh_key_data = ""
-    ssh_key_path = None
+    public_ssh_key_data = ""
+    private_ssh_key_path = None
     if answers["answer"] == EXISTING_CONTENTS:
         print("Registering from file contents")
-        ssh_key_data = input(
+        public_ssh_key_data = input(
             "[\033[33m?\033[0m] Please paste the contents of your public ssh key. It should start with ssh-rsa: ")
     elif answers["answer"] == EXISTING_PATH:
         print("Register in vpc existing key from path")
@@ -90,31 +77,26 @@ def register_ssh_key(ibm_vpc_client, config, auto=False):
         ]
         answers = inquirer.prompt(questions, raise_keyboard_interrupt=True)
         with open(os.path.abspath(os.path.expanduser(answers["public_key_path"])), 'r') as file:
-            ssh_key_data = file.read()
-    else:
-        ssh_key_data, ssh_key_path = generate_keypair(keyname)
+            public_ssh_key_data = file.read()
+    else: # choice GENERATE_NEW
+        public_ssh_key_data, private_ssh_key_path = generate_keypair()
 
-    response = None
-    try:    # regardless of the above, try registering an ssh-key 
-        response = ibm_vpc_client.create_key(public_key=ssh_key_data, name=keyname, resource_group={
+    try:    # regardless of the above choices, try registering an ssh-key 
+        response = ibm_vpc_client.create_key(public_key=public_ssh_key_data, name=keyname, resource_group={
                                         "id": resource_group_id}, type='rsa')
     except ApiException as e:
-        print(e)
-            
-        if "Key with name already exists" in e.message and keyname == DEFAULT_KEY_NAME:
-            key = get_ssh_key(ibm_vpc_client, DEFAULT_KEY_NAME)
-            ibm_vpc_client.delete_key(id=key['id'])
-            response = ibm_vpc_client.create_key(public_key=ssh_key_data, name=keyname, resource_group={
-                                        "id": resource_group_id}, type='rsa')                
+        if "Key with name already exists" in e.message:
+            print(color_msg(f"Key by the name '{keyname}' already exists",Color.RED))
+            keyname = free_dialog("Please specify a *unique* name for the new key")["answer"]
         else: 
             if "Key with fingerprint already exists" in e.message:
                 print(color_msg("Can't register an SSH key with the same fingerprint",Color.RED))
-            raise # can't continue the configuration process without a valid ssh key       
+            exit(1) # can't continue the configuration process without a valid ssh key   
             
-    print(f"\033[92mnew SSH key {keyname} been registered in vpc\033[0m")
+    print(f"\033[92mnew SSH key: '{keyname}' been registered in vpc\033[0m")
 
     result = response.get_result()
-    return result['name'], result['id'], ssh_key_path
+    return result['name'], result['id'], private_ssh_key_path
 
 
 DEPENDENCIES = {'ibm_vpc': {'resource_group_id': None}}
@@ -151,28 +133,32 @@ class SshKeyConfig(ConfigBuilder):
         CREATE_NEW_SSH_KEY = f"""Register new SSH key in IBM VPC {color_msg("[Best Practice]",Color.LIGHTGREEN)}"""
 
         default = find_default(self.defaults, ssh_key_objects, id='key_id')
+        default = default if default else CREATE_NEW_SSH_KEY
         ssh_key_name, ssh_key_id = find_name_id(
-            ssh_key_objects, 'Choose ssh key', do_nothing=CREATE_NEW_SSH_KEY, default=CREATE_NEW_SSH_KEY)
-
-        ssh_key_path = None
-        if not ssh_key_name:
-            ssh_key_name, ssh_key_id, ssh_key_path = register_ssh_key(
+            ssh_key_objects, 'Choose ssh key', do_nothing=CREATE_NEW_SSH_KEY, default=default)
+        
+        private_ssh_key_path = None
+        if not ssh_key_name: # user chose to create a new key / no keys registered
+            ssh_key_name, ssh_key_id, private_ssh_key_path = register_ssh_key(
                 self.ibm_vpc_client, self.base_config)
 
         self.ssh_key_id = ssh_key_id
         self.ssh_key_name = ssh_key_name
 
-        if not ssh_key_path:
+        # private_ssh_key_path is known only if user generated a key.  
+        if not private_ssh_key_path:
             questions = [
                 inquirer.Text(
-                    "private_key_path", message=f'Please paste path to \033[92mprivate\033[0m ssh key associated with selected public key {ssh_key_name}', validate=self._validate_keypair, default=self.defaults.get('ssh_key_filename') or "~/.ssh/id_rsa")
+                    "private_key_path", message=f'Please paste path to \033[92mprivate\033[0m ssh key associated with selected public key {ssh_key_name}',
+                      validate=self._validate_keypair,
+                      default=self.defaults.get('ssh_key_filename') or "~/.ssh/id_rsa")
             ]
             answers = inquirer.prompt(questions, raise_keyboard_interrupt=True)
-            ssh_key_path = os.path.abspath(
+            private_ssh_key_path = os.path.abspath(
                 os.path.expanduser(answers["private_key_path"]))
 
         # currently the user is hardcoded to root
-        return ssh_key_id, ssh_key_path, 'root'
+        return ssh_key_id, private_ssh_key_path, 'root'
 
     @update_decorator
     def verify(self, base_config):

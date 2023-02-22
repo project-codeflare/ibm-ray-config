@@ -7,7 +7,7 @@ from ibm_watson import IAMTokenManager
 import threading
 import time
 import sys
-from ibm_ray_config.modules.utils import CACHE, find_default, get_option_from_list
+from ibm_ray_config.modules.utils import CACHE, find_default, get_option_from_list, get_region_by_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +62,17 @@ class ConfigBuilder:
         self.resource_controller_service = ResourceControllerV2(authenticator=authenticator)
 
 
+    def get_region(self):
+        """returns the region based on 
+            either the endpoint the vpc client was initialized with,
+            or the parent class region value.  """
+        region = None
+        try:
+            region = get_region_by_endpoint(self.ibm_vpc_client.service_url)
+        except Exception:
+            region = ConfigBuilder.region
+        return region
+    
     """Interacts with user to get all required parameters"""
 
     def run(self, config) -> Dict[str, Any]:

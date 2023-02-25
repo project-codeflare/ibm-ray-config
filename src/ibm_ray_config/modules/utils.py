@@ -388,8 +388,8 @@ def dump_cluster_folder(config, output_folder):
     os.makedirs(cluster_folder, exist_ok=True) # directory already exists
     os.makedirs(scripts_folder, exist_ok=True) # directory already exists
 
-    cluster_file = "config.yaml"
-    cluster_file_path = os.path.join(cluster_folder, cluster_file)
+    cluster_file_name = "config.yaml"
+    cluster_file_path = os.path.join(cluster_folder, cluster_file_name)
 
     # get source path of ssh keys and extract their name
     original_private_key_path = os.path.expanduser(config['auth']['ssh_private_key'])
@@ -401,7 +401,7 @@ def dump_cluster_folder(config, output_folder):
     new_public_key_path = new_private_key_path+'.pub'
     config['auth']['ssh_private_key'] = Path(new_private_key_path).name
 
-     # dump config to cluster cluster_file
+    # dump config to cluster cluster_file
     with open(cluster_file_path, 'w') as file:
         yaml.dump(config, file, default_flow_style=False)
     
@@ -412,11 +412,11 @@ def dump_cluster_folder(config, output_folder):
 
     write_script('create.sh',
                 scripts_folder,
-                [f"ray up -y {cluster_file_path}"])
+                [f"ray up -y {cluster_file_name}"])
 
     write_script('connect.sh',
                 scripts_folder,
-                [f"ray dashboard --port 8265 --remote-port 8265 {cluster_file_path}"])
+                [f"ray dashboard --port 8265 --remote-port 8265 {cluster_file_name}"])
 
     # kill tunnel created by ray dashboard by killing the PIDs involved
     write_script('disconnect.sh',
@@ -426,7 +426,11 @@ def dump_cluster_folder(config, output_folder):
         
     write_script('terminate.sh',
                 scripts_folder,
-                [f"ray down -y {cluster_file_path}"])
+                [f"ray down -y {cluster_file_name}"])
+    
+    write_script('stop.sh',
+                scripts_folder,
+                [f"ray stop -y {cluster_file_name}"])
 
     write_script('ray.sh',
                 scripts_folder,

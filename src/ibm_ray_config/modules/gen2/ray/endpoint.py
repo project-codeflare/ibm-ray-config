@@ -13,8 +13,8 @@ class RayEndpointConfig(EndpointConfig):
             # when endpoint was provided directly by user instead of selecting it
             # we just set it
             if base_endpoint:
-                ConfigBuilder.ibm_vpc_client.set_service_url(base_endpoint + '/v1')
-                self.ibm_vpc_client.set_service_url(base_endpoint + '/v1')
+                ConfigBuilder.ibm_vpc_client.set_service_url(base_endpoint)
+                self.ibm_vpc_client.set_service_url(base_endpoint)
 
             self.defaults['region'] = get_region_by_endpoint(
                 base_endpoint) if base_endpoint else None

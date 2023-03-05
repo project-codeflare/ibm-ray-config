@@ -19,9 +19,8 @@ class EndpointConfig(ConfigBuilder):
         
         default = self.defaults.get('region')
         region_obj = get_option_from_list("Choose region", regions_objects, default = default)
-
         # update global ibm_vpc_client to selected endpoint
-        ConfigBuilder.ibm_vpc_client.set_service_url(region_obj['endpoint'] + '/v1')
+        ConfigBuilder.ibm_vpc_client.set_service_url(region_obj['endpoint']+'/v1')
         ConfigBuilder.region = region_obj['name']
         
         return region_obj['endpoint']
@@ -34,7 +33,7 @@ class EndpointConfig(ConfigBuilder):
         # currently hardcoded for us-south
         region_obj = next((r for r in regions_objects if r['name'] == 'us-south'), None)
         
-        ConfigBuilder.ibm_vpc_client.set_service_url(region_obj['endpoint'] + '/v1')
+        ConfigBuilder.ibm_vpc_client.set_service_url(region_obj['endpoint'])
         ConfigBuilder.region = region_obj['name']
         
         return region_obj['endpoint']

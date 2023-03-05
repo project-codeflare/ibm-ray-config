@@ -5,6 +5,7 @@ import click
 import yaml
 
 from ibm_ray_config.modules.utils import color_msg, Color, verify_paths, dump_cluster_folder
+from ibm_ray_config.modules.cleanup import clean_cluster
 
 # currently supporting configuration for ray above IBM Gen2 VPC. 
 IBM_VPC = 'IBM VPC'
@@ -52,20 +53,27 @@ def validate_api_keys(base_config, modules, iam_api_key, compute_iam_endpoint):
     
 @click.command()
 @click.option('--output-folder', '-o', help='Output folder to save configurations')
-@click.option('--input-file', '-i', help=f'Template for the new configuration')
+# @click.option('--input-file', '-i', help=f'Template for the new configuration')
 @click.option('--iam-api-key', '-a', help='IAM_API_KEY')
 @click.option('--version', '-v', help=f'Get package version', is_flag=True)
 @click.option('--compute-iam-endpoint', help='IAM endpoint url used for compute instead of default https://iam.cloud.ibm.com')
-@click.option('--endpoint', help='IBM Cloud API endpoint')
+@click.option('--region', '-r', help='IBM Cloud VPC API region')
+@click.option('--cleanup', '-c', help='Path to cluster config file to delete')
 @click.option('--pr', '-g', help=f'Temporary workaround for ray gen2 only. If specified, use provider setup from PR github', is_flag=True, default=False)
-def builder(iam_api_key, output_folder, input_file, version, compute_iam_endpoint, endpoint, pr):
-    defaults = None  # to be replaced by a flag  
+def builder(iam_api_key, output_folder, version, compute_iam_endpoint, region, cleanup, pr):
+    defaults = None  # to be replaced by a flag
+    input_file = None # to be replaced by a flag 
+
     if version:
         print(f"{pkg_resources.get_distribution('ibm-ray-config').project_name} "
               f"{pkg_resources.get_distribution('ibm-ray-config').version}")
         exit(0)
 
-    print(color_msg("\nWelcome to ibm_ray_config export helper\n", color=Color.YELLOW))
+    if cleanup:
+        clean_cluster(cleanup)
+        exit(0)
+
+    print(color_msg(f"\nWelcome to ibm_ray_config export helper\n", color=Color.YELLOW))
 
     input_file, output_folder = verify_paths(input_file, output_folder)
 
@@ -79,8 +87,8 @@ def builder(iam_api_key, output_folder, input_file, version, compute_iam_endpoin
     base_config['create_defaults'] = defaults
     base_config, modules = validate_api_keys(base_config, modules, iam_api_key, compute_iam_endpoint)
 
-    if endpoint:
-        base_config['provider']['endpoint'] = endpoint
+    if region:
+        base_config['provider']['endpoint'] = f'https://{region}.iaas.cloud.ibm.com/v1'
 
     for module in modules:
         next_module = module(base_config)

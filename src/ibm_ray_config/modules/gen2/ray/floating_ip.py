@@ -24,7 +24,7 @@ class FloatingIpConfig(ConfigBuilder):
                     else:
                         self.base_config['available_node_types'][available_node_type]['node_config'].pop('head_ip', None)
             else:
-                self.base_config['available_node_types']['ray_head_default']['node_config']['head_ip'] = head_ip
+                self.base_config['available_node_types'][self.DEFAULT_NODE_TYPE]['node_config']['head_ip'] = head_ip
 
         return self.base_config
     

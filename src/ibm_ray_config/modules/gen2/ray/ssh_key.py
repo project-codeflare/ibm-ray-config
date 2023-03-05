@@ -21,4 +21,4 @@ class RaySshKeyConfig(SshKeyConfig):
             for available_node_type in self.base_config['available_node_types']:
                 self.base_config['available_node_types'][available_node_type]['node_config']['key_id'] = ssh_key_id
         else:
-            self.base_config['available_node_types'] = {'ray_head_default': {'node_config': {'key_id': ssh_key_id}}}
+            self.base_config['available_node_types'] = {self.DEFAULT_NODE_TYPE: {'node_config': {'key_id': ssh_key_id}}}

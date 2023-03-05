@@ -1,10 +1,10 @@
 # Ray VPC allocator / Configuration Generator For IBM VPC
 
-`ibm-ray-config` is a CLI tool that seamlessly allocates and registers VPC resources, such as: subnets, gateways, ips, ssh keys and security groups rules to generate Ray configuration files for IBM VPC.
+`ibm-ray-config` is a CLI tool that seamlessly allocates and registers VPC resources (such as: subnets, gateways, ips, ssh keys and security groups rules), to generate Ray configuration files and executables for IBM VPC.
 
 ## Setup
 
-The tool has been mostly tested with Ubuntu 18.04/20.04 and Fedora 35, but should work with most Linux systems.   
+The tool has been mostly tested with Ubuntu 20.04/22.04 and Fedora 35/37, but should work on most Linux systems.   
 Requirements: `ssh-keygen` utility installed:
 ```
 sudo apt install openssh-client
@@ -17,10 +17,11 @@ pip install ibm-ray-config
 ```
 
 ## Usage
-Use the configuration tool as follows:
+
+### Set up IBM VPC resources and configure a cluster for Ray:
 
 ```
-ibm-ray-config [--iam-api-key IAM_API_KEY] [--endpoint ENDPOINT] [-i INPUT_FILE] [-o OUTPUT_PATH] [--compute-iam-endpoint IAM_ENDPOINT] [--version] 
+ibm-ray-config [--iam-api-key IAM_API_KEY] [--r REGION] [-o OUTPUT_PATH] [--compute-iam-endpoint IAM_ENDPOINT] [--version] 
 ```
 
 Get a short description of the available flags via ```ibm-ray-config --help```
@@ -33,18 +34,27 @@ Get a short description of the available flags via ```ibm-ray-config --help```
  |<span style="color:orange">Key|<span style="color:orange">Default|<span style="color:orange">Mandatory|<span style="color:orange">Additional info|
  |---|---|---|---|
  | iam-api-key   | |yes|IBM Cloud API key. To generate a new API Key, adhere to the following [guide](https://www.ibm.com/docs/en/spectrumvirtualizecl/8.1.3?topic=installing-creating-api-key)
- | input-file    |<compute_backend>/defaults.py| no | Existing config file to be used as a template in the configuration process |
- | output-path   |A randomly generated path to a folder | no |A custom location for the program's outputs |
- | version       | | no |Returns ibm-ray-config's package version|
- |endpoint| | no|Geographical location for deployment and scope for available resources by the IBM-VPC service. Endpoint urls are listed <a href="https://cloud.ibm.com/docs/vpc?topic=vpc-creating-a-vpc-in-a-different-region&interface=cli"> here</a>. |
+ |output-path   |current working directory ($PWD) | no |A custom location for the program's outputs |
+ |version       | | no |Returns ibm-ray-config's package version|
+ |region| | no|Geographical location for deployment and scope for available resources by the IBM-VPC service. Region are listed <a href="https://cloud.ibm.com/docs/vpc?topic=vpc-creating-a-vpc-in-a-different-region&interface=cli"> here</a>. |
  compute_iam_endpoint|https://iam.cloud.ibm.com|no|Alternative IAM endpoint url for the cloud provider, e.g. https://iam.test.cloud.ibm.com|
 
+### Operate the cluster
+To interact with the cluster, execute the scripts in `<cluster_folder>/scripts/`:  
+- `up.sh`, `down.sh`, `stop.sh` and `submit.sh` correspond to Ray's counterpart [commands](https://docs.ray.io/en/latest/cluster/cli.html?highlight=cli#ray-monitor).
+- `down-vpc.sh`  will delete all resources created by Ray and `ibm-ray-config`  
+- `connect.sh` will open a secure connection to your cluster, while `disconnect.sh` will terminate it.
+- `ray.sh` can be used to run all other of Ray's [commands](https://docs.ray.io/en/latest/cluster/cli.html?highlight=cli#ray-monitor).
+- `tunnel.sh` establish forward additional ports over secure ssh tunnel using, e.g. ray serve ports: `tunnel.sh 8000`. 
 
+Notice - To use Ray commands without the aforementioned scripts, either run them from the cluster's folder, or edit the `ssh_private_key` field to contain the absolute path to the associated ssh private key.
 
 ### Using ibm-ray-config Config Tool Programmatically
-Attention: though not all fields are mandatory, unspecified resources will be created automatically on the backend.
+#### Disclaimer:  
+This feature is currently dysfunctional, as it wasn't maintained throughout the previous releases.  
+We hope to support it in the near future. 
 
-#### IBM VPC
+Attention: though not all fields are mandatory, unspecified resources will be created automatically on the backend.
 
 Mandatory fields are: `iam_api_key` and `region`.
 Processor architecture: Intel x86.    

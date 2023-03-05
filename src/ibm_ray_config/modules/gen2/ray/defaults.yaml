@@ -48,7 +48,7 @@ auth:
 # The key is the name of the node type, which is just for debugging purposes.
 # The node config specifies the launch config and physical instance type.
 available_node_types:
-    ray_head_default:
+    node_profile:
         # The minimum number of worker nodes of this type to launch.
         # This number should be >= 0.
         min_workers: 0
@@ -72,7 +72,7 @@ available_node_types:
             volume_tier_name: general-purpose
 
 # Specify the node type of the head node (as configured above).
-head_node_type: ray_head_default
+head_node_type: node_profile
 
 # Files or directories to copy to the head and worker nodes. The format is a
 # dictionary from REMOTE_PATH: LOCAL_PATH, e.g.
@@ -106,8 +106,14 @@ initialization_commands: []
 setup_commands:
     # Important to note: Ubuntu22 and Ubuntu20 comes with different python versions preinstalled,
     # albeit pointed by the same symlink: /usr/bin/python3.
-    # Also, if running on Ubuntu22 config the needrestart to restart services automatically instead of interactive mode
+    # Ubuntu22: config the needrestart to restart services automatically instead of in interactive mode.
+    # disable the unattended-upgrades process to avoid interruption by automatic upgrades. 
+    # kills the process holding the lock on the dpkg frontend, if such process exists.
     - find /etc/needrestart/needrestart.conf >/dev/null 2>1 && sed -i "/#\$nrconf{restart} = 'i';/s/.*/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
+    - sudo systemctl stop unattended-upgrades || true;
+    - sudo systemctl disable unattended-upgrades || true;
+    - sudo sed -i 's/Unattended-Upgrade "1"/Unattended-Upgrade "0"/g' /etc/apt/apt.conf.d/20auto-upgrades || true;
+    - sudo kill -9 `sudo lsof /var/lib/dpkg/lock-frontend | awk '{print $2}'| tail -n 1` 2>/dev/null || true
     - apt update && apt install python3-pip -y
     - test -d ~/.venv || (pip install virtualenv && virtualenv -p /usr/bin/python3 ~/.venv && echo source ~/.venv/bin/activate >> ~/.bashrc && echo "source ~/.venv/bin/activate" | cat - ~/.bashrc | tee ~/.bashrc)
     - source ~/.venv/bin/activate

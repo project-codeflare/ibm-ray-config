@@ -162,7 +162,7 @@ class RayVPCConfig(ConfigBuilder):
     def __init__(self, base_config: Dict[str, Any]) -> None:
         super().__init__(base_config)
         self.region = self.get_region()
-        self.default_vpc_name_scheme = f'vpc-in-{self.region}-{str(uuid4())[:5]}'
+        self.default_vpc_name_scheme = f'vpc-{uuid4().hex[:5]}'
 
         if base_config.get('available_node_types'):
             for available_node_type in self.base_config['available_node_types']:
@@ -189,7 +189,7 @@ class RayVPCConfig(ConfigBuilder):
                     node_config)
         else:
             self.base_config['available_node_types'] = {
-                'ray_head_default': {'node_config': node_config}}
+                self.DEFAULT_NODE_TYPE: {'node_config': node_config}}
 
 
     @update_decorator
@@ -243,11 +243,11 @@ class RayVPCConfig(ConfigBuilder):
         def _create():
             return ibm_vpc_client.create_vpc(address_prefix_management='auto', classic_access=False,
                                             name=vpc_name, resource_group=resource_group).get_result()
-        default_vpc_prefix = self.default_vpc_name_scheme.split('-in',1)[0]
+        default_vpc_prefix = self.default_vpc_name_scheme.rsplit('-',1)[0]
         if auto:
             vpc_prefix = default_vpc_prefix
         else:
-            print(f"VPC name is {self.default_vpc_name_scheme}")
+            print(f"VPC name is: '{self.default_vpc_name_scheme}'")
             vpc_prefix = free_dialog(msg= f"Pick a custom name to replace: '{default_vpc_prefix}'(or Enter for default)",
                                     default=default_vpc_prefix,
                                     validate=validate_name)['answer']
@@ -410,6 +410,7 @@ class RayVPCConfig(ConfigBuilder):
             # Create a new VPC
             if not vpc_name:
                 resource_group_id = self._select_resource_group()
+                print(color_msg(f"Using resource group id: {resource_group_id}",color=Color.LIGHTGREEN))
                 resource_group = {'id': resource_group_id}
 
                 vpc_obj = self._create_vpc(ibm_vpc_client, resource_group)
@@ -504,6 +505,7 @@ class RayVPCConfig(ConfigBuilder):
     @update_decorator
     def create_default(self):
         resource_group_id = self._select_resource_group(auto=True)
+        print(color_msg(f"Using resource group id: {resource_group_id}",color=Color.LIGHTGREEN))
         resource_group = {'id': resource_group_id}
 
         vpc_objects = self.ibm_vpc_client.list_vpcs().get_result()['vpcs']
@@ -513,7 +515,7 @@ class RayVPCConfig(ConfigBuilder):
             # TODO: validate existing
             print(f"\n\n\033[92mUsing existing VPC with default name {vpc_obj['name']} \033[0m")
         else:
-            vpc_name = f"{self.default_vpc_name_scheme}-{str(uuid4())[:5]}"
+            vpc_name = f"{self.default_vpc_name_scheme}"
             vpc_obj = self._create_vpc(self.ibm_vpc_client,
                                     resource_group, vpc_name, auto=True)
             if not vpc_obj:

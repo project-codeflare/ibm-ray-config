@@ -15,7 +15,7 @@ from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 import ibm_cloud_sdk_core
 
 
-CACHE = {}
+CACHE = {}  # used to store data that isn't stored in the cluster's config file, e.g. vpc_name.
 ARG_STATUS = Enum('STATUS', 'VALID INVALID MISSING')  # variable possible status.
 
 class MSG_STATUS(Enum):
@@ -167,7 +167,7 @@ def validate_exists(answers, current):
 
 
 def get_region_by_endpoint(endpoint):
-    return re.search('//(.+?).iaas.cloud.ibm.com', endpoint).group(1)
+    return re.search('//(.+?).iaas.cloud.ibm.com/v1', endpoint).group(1)
 
 
 def find_default(template_dict, objects, name=None, id=None, substring=False):
@@ -306,14 +306,11 @@ def verify_paths(input_path, output_path, verify_config=False):
             else:
                 path = free_dialog(request)['answer']
 
-    if not verify_config:
-        input_path = _prompt_user(input_path, '', _is_valid_input_file,
-                                  "Provide a path to your existing config file, or leave blank to configure from template",
-                                  'Using default input file\n')
     output_path = _prompt_user(output_path, os.getcwd(), _is_valid_output_dir,
                                "Provide a custom path for your config file, or leave blank for default output location",
-                               'Using default output path\n')
-    return input_path, output_path
+                               f"Using default output path: '{os.getcwd()}'\n")
+    # currently not supporting input file from user.
+    return '', output_path
 
 def verify_iam_api_key(answers, apikey, iam_endpoint=None):
     """Terminates the config tool if no IAM_API_KEY matching the provided value exists"""
@@ -383,13 +380,15 @@ def dump_cluster_folder(config, output_folder):
     # create a output_folder and scripts_folder if doesn't exist
     if not os.path.isdir(output_folder):
         os.mkdir(output_folder)
-    cluster_folder = os.path.join(output_folder, f"{config['cluster_name']}")
-    scripts_folder = os.path.join(cluster_folder, f"scripts")
-    os.makedirs(cluster_folder, exist_ok=True) # directory already exists
-    os.makedirs(scripts_folder, exist_ok=True) # directory already exists
+    cluster_folder_name = f"{config['cluster_name']}-at-"\
+                          f"{CACHE['vpc_name']}-in-{config['provider']['region']}"
+    cluster_folder_path = os.path.join(output_folder, cluster_folder_name)
+    scripts_folder_path = os.path.join(cluster_folder_path, 'scripts')
+    os.makedirs(cluster_folder_path, exist_ok=True)
+    os.makedirs(scripts_folder_path, exist_ok=True)
 
     cluster_file_name = "config.yaml"
-    cluster_file_path = os.path.join(cluster_folder, cluster_file_name)
+    cluster_file_path = os.path.join(cluster_folder_path, cluster_file_name)
 
     # get source path of ssh keys and extract their name
     original_private_key_path = os.path.expanduser(config['auth']['ssh_private_key'])
@@ -397,7 +396,7 @@ def dump_cluster_folder(config, output_folder):
     private_key_name = original_private_key_path.rsplit('/',1)[-1]
 
     # update ssh key path to output folder
-    new_private_key_path = os.path.join(cluster_folder, private_key_name)
+    new_private_key_path = os.path.join(cluster_folder_path, private_key_name)
     new_public_key_path = new_private_key_path+'.pub'
     config['auth']['ssh_private_key'] = Path(new_private_key_path).name
 
@@ -410,33 +409,46 @@ def dump_cluster_folder(config, output_folder):
     copy_or_move_file(original_private_key_path, new_private_key_path)
     copy_or_move_file(original_public_key_path, new_public_key_path)
 
-    write_script('create.sh',
-                scripts_folder,
-                [f"ray up -y {cluster_file_name}"])
+    write_script('up.sh',
+                scripts_folder_path,
+                [f"ray up -y {cluster_file_name} $@"])
 
     write_script('connect.sh',
-                scripts_folder,
+                scripts_folder_path,
                 [f"ray dashboard --port 8265 --remote-port 8265 {cluster_file_name}"])
 
-    # kill tunnel created by ray dashboard by killing the PIDs involved
+    write_script('tunnel.sh',
+                scripts_folder_path,
+                [f"ssh -i {private_key_name} -f -N -L $1:localhost:$1 root@$(ray get-head-ip {cluster_file_name})"])
+    
+    # kill tunnel created by ray dashboard by killing all the PIDs involved with the port
     write_script('disconnect.sh',
-                scripts_folder,
+                scripts_folder_path,
                 ["lsof -i:8265 | awk 'NR>1 {print $2}' | sort -u | xargs kill"],
                 run_from_cluster_dir = False)
         
-    write_script('terminate.sh',
-                scripts_folder,
-                [f"ray down -y {cluster_file_name}"])
+    write_script('down.sh',
+                scripts_folder_path,
+                [f"ray down -y {cluster_file_name} $@"])
+    
+    write_script('down-vpc.sh',
+            scripts_folder_path,
+            [f"ibm-ray-config -c {cluster_file_name}"])
     
     write_script('stop.sh',
-                scripts_folder,
-                [f"ray stop -y {cluster_file_name}"])
+                scripts_folder_path,
+                [f"ray stop -y {cluster_file_name} $@"])
 
     write_script('ray.sh',
-                scripts_folder,
+                scripts_folder_path,
                 [f"ray $@"])
 
-    return cluster_folder
+    write_script('submit.sh',
+            scripts_folder_path,
+            ["pythonexec=$(realpath $1)\n",
+             "ray submit "+cluster_file_name+" $pythonexec ${@:2}"])
+
+    return cluster_folder_path
 
 
 class Color(Enum):

@@ -32,7 +32,7 @@ class ConfigBuilder:
     Interface for building IBM Cloud config files for Ray
     """
     iam_api_key, ibm_vpc_client, resource_service_client, resource_controller_service, compute_iam_endpoint, region = None, None, None, None, None, None
-
+    DEFAULT_NODE_TYPE = 'node_profile'
     def __init__(self, base_config: Dict[str, Any]) -> None:
 
         self.defaults = {}

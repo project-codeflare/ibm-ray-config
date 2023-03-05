@@ -5,10 +5,10 @@ from ibm_ray_config.modules.gen2.ray.image import RayImageConfig
 from ibm_ray_config.modules.gen2.ray.ssh_key import RaySshKeyConfig
 from ibm_ray_config.modules.gen2.ray.vpc import RayVPCConfig
 from ibm_ray_config.modules.gen2.ray.workers import WorkersConfig
-from ibm_ray_config.modules.gen2.profile import ProfileConfig
+from ibm_ray_config.modules.config_builder import ConfigBuilder
 
 MODULES = [RayApiKeyConfig, RayEndpointConfig, RayVPCConfig,
-           RaySshKeyConfig, RayImageConfig, FloatingIpConfig, ProfileConfig, WorkersConfig]
+           RaySshKeyConfig, RayImageConfig, FloatingIpConfig, WorkersConfig]
 
 from ibm_ray_config.main import load_base_config
 
@@ -18,20 +18,21 @@ def load_config(backend, iam_api_key, region=None,
                     vpc_id=None, min_workers=0, max_workers=0):
     
     base_config = load_base_config(backend)
+    head_node_data = base_config['available_node_types'][ConfigBuilder.DEFAULT_NODE_TYPE]
     
     base_config['provider']['iam_api_key'] = iam_api_key
-    base_config['available_node_types']['ray_head_default']['node_config']['vpc_id'] = vpc_id
-    base_config['available_node_types']['ray_head_default']['node_config']['image_id'] = image_id
-    base_config['available_node_types']['ray_head_default']['node_config']['instance_profile_name'] = profile_name
-    base_config['available_node_types']['ray_head_default']['node_config']['key_id'] = key_id
+    head_node_data['node_config']['vpc_id'] = vpc_id
+    head_node_data['node_config']['image_id'] = image_id
+    head_node_data['node_config']['instance_profile_name'] = profile_name
+    head_node_data['node_config']['key_id'] = key_id
     base_config['auth']['ssh_private_key'] = ssh_key_filename
     
     base_config['provider']['region'] = region
     base_config['provider']['endpoint'] = f'https://{region}.iaas.cloud.ibm.com'
 
     base_config['max_workers'] = max_workers
-    base_config['available_node_types']['ray_head_default']['min_workers'] = min_workers
-    base_config['available_node_types']['ray_head_default']['max_workers'] = max_workers
+    head_node_data['min_workers'] = min_workers
+    head_node_data['max_workers'] = max_workers
     
     return base_config
 

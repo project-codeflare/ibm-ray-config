@@ -53,7 +53,6 @@ def validate_api_keys(base_config, modules, iam_api_key, compute_iam_endpoint):
     
 @click.command()
 @click.option('--output-folder', '-o', help='Output folder to save configurations')
-# @click.option('--input-file', '-i', help=f'Template for the new configuration')
 @click.option('--iam-api-key', '-a', help='IAM_API_KEY')
 @click.option('--version', '-v', help=f'Get package version', is_flag=True)
 @click.option('--compute-iam-endpoint', help='IAM endpoint url used for compute instead of default https://iam.cloud.ibm.com')

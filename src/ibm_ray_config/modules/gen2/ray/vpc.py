@@ -294,7 +294,7 @@ class RayVPCConfig(ConfigBuilder):
         ibm_vpc_client.set_subnet_public_gateway(
             subnet_id, {'id': gateway_id})
 
-        print(color_msg(f"VPC subnet {subnet_prototype['name']} been created and attached to gateway", color=Color.LIGHTGREEN))
+        print(color_msg(f"VPC subnet {subnet_prototype['name']} been created and attached to gateway\n", color=Color.LIGHTGREEN))
         
         # Update security group to have all required rules
         sg_id = vpc_obj['default_security_group']['id']
@@ -321,7 +321,7 @@ class RayVPCConfig(ConfigBuilder):
                 res = ibm_vpc_client.create_security_group_rule(
                     sg_id, sg_rule_prototype).get_result()
 
-        print(color_msg(f"Security group {sg_name} been updated with required rules", color=Color.LIGHTGREEN))
+        print(color_msg(f"Security group {sg_name} been updated with required rules\n", color=Color.LIGHTGREEN))
 
     def create_public_gateway(self, vpc_obj, zone_obj, resource_group, subnet_name):
         vpc_id = vpc_obj['id']
@@ -410,7 +410,7 @@ class RayVPCConfig(ConfigBuilder):
             # Create a new VPC
             if not vpc_name:
                 resource_group_id = self._select_resource_group()
-                print(color_msg(f"Using resource group id: {resource_group_id}",color=Color.LIGHTGREEN))
+                print(color_msg(f"Using resource group id: {resource_group_id}\n",color=Color.LIGHTGREEN))
                 resource_group = {'id': resource_group_id}
 
                 vpc_obj = self._create_vpc(ibm_vpc_client, resource_group)

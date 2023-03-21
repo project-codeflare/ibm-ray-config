@@ -17,7 +17,7 @@ def generate_keypair():
     filename = f"{os.sep}tmp{os.sep}{DEFAULT_KEY_NAME}"
 
     os.system(f'ssh-keygen -b 2048 -t rsa -f {filename} -q -N ""')
-    print(f"\n\n\033[92mSSH key pair been generated\n")
+    print(color_msg("SSH key pair been generated",Color.LIGHTGREEN))
     print(f"private key intermediate location: {os.path.abspath(filename)}")
     print(f"public key intermediate location: {os.path.abspath(filename)}.pub\033[0m")
     with open(f"{filename}.pub", 'r') as file:
@@ -93,7 +93,7 @@ def register_ssh_key(ibm_vpc_client, config, auto=False):
                 print(color_msg("Can't register an SSH key with the same fingerprint",Color.RED))
             exit(1) # can't continue the configuration process without a valid ssh key   
             
-    print(f"\033[92mnew SSH key: '{keyname}' been registered in vpc\033[0m")
+    print(color_msg(f"new SSH key '{keyname}' been registered in vpc\n", Color.LIGHTGREEN))
 
     result = response.get_result()
     return result['name'], result['id'], private_ssh_key_path
@@ -197,7 +197,7 @@ class SshKeyConfig(ConfigBuilder):
             ssh_key_data = subprocess.getoutput([f"ssh-keygen -y -f {self.defaults['ssh_key_filename']} | cut -d' ' -f 2"])
             response = self.ibm_vpc_client.create_key(public_key=ssh_key_data, name=default_keyname, resource_group={
                                         "id": resource_group_id}, type='rsa')
-            print(f"\033[92mnew SSH key {default_keyname} been registered in vpc\033[0m")
+            print(color_msg(f"new SSH key {default_keyname} been registered in vpc\n", Color.LIGHTGREEN))
             result = response.get_result()
             return result['id'], self.defaults['ssh_key_filename'], 'root'
         else:

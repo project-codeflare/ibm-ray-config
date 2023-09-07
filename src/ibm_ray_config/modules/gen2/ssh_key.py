@@ -91,6 +91,8 @@ def register_ssh_key(ibm_vpc_client, config, auto=False):
         else: 
             if "Key with fingerprint already exists" in e.message:
                 print(color_msg("Can't register an SSH key with the same fingerprint",Color.RED))
+            else:
+                print(color_msg("Failed to register SSH keys with error:\n"+e.message,Color.RED))
             exit(1) # can't continue the configuration process without a valid ssh key   
             
     print(color_msg(f"new SSH key '{keyname}' been registered in vpc\n", Color.LIGHTGREEN))

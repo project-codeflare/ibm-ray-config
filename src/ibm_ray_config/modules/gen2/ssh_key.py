@@ -10,10 +10,16 @@ from ibm_ray_config.modules.utils import (Color, color_msg, find_default, find_n
                                         validate_exists, validate_not_empty, free_dialog)
 
 from ibm_cloud_sdk_core import ApiException
-DEFAULT_KEY_NAME = f'ray-{os.environ.get("USERNAME")}-{str(uuid4())[:5]}'
+DEFAULT_KEY_NAME = f'ray-{os.environ.get("USER")}-{str(uuid4())[:5]}'
         
 def generate_keypair():
     """Returns newly generated public ssh-key's contents and private key's path"""
+    global DEFAULT_KEY_NAME
+    # if no USER env exists, replace the None received by os.environ.get("USER")
+    # with a valid string name for a key on ibm vpc platform 
+    if "None" in DEFAULT_KEY_NAME:
+        DEFAULT_KEY_NAME= DEFAULT_KEY_NAME.replace("None", "autogen")
+
     filename = f"{os.sep}tmp{os.sep}{DEFAULT_KEY_NAME}"
 
     os.system(f'ssh-keygen -b 2048 -t rsa -f {filename} -q -N ""')
